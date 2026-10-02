@@ -1,83 +1,88 @@
-from fastapi import FastAPI
-app = FastAPI(
-    title="My Developer Profile API",
-    description="My personal API for profile, skills, projects and learning information",
-    version="1.0.0"
-)
-# HOME ENDPOINT
+from fastapi import FastAPI, HTTPException, status
+from pydantic import BaseModel
+app = FastAPI()
+class Skill(BaseModel):
+    name: str
+    level: str
+skills = [
+    {
+        "name": "SAP CPI",
+        "level": "Learning"
+    },
+    {
+        "name": "SAP API Management",
+        "level": "First"
+    },
+    {
+        "name": "Python",
+        "level": "Second"
+    },
+    {
+        "name": "Postman",
+        "level": "Advance"
+    },
+    {
+        "name": "LangChain",
+        "level": "Beginner"
+    },
+    {
+        "name": "LangChain",
+        "level": "Beginner"
+    },
+    {
+        "name": "LangGraph",
+        "level": "Beginner"
+    }
+]
 @app.get("/")
 def home():
     return {
         "message": "Welcome to My Developer Profile API"
     }
-# PROFILE ENDPOINT
-@app.get("/profile")
-def get_profile():
-    return {
-        "name": "Varun Kumar",
-        "role": "SAP Integration Developer",
-        "location": "India",
-        "skills": [
-            "SAP CPI",
-            "SAP Integration Suite",
-            "SAP API Management",
-            "Postman",
-            "Python"
-        ]
-    }
-# GET ALL SKILLS
 @app.get("/skills")
 def get_skills():
     return {
-        "skills": [
-            {
-                "name": "SAP CPI",
-                "level": "Learning"
-            },
-            {
-                "name": "SAP API Management",
-                "level": "Learning"
-            },
-            {
-                "name": "Python",
-                "level": "Learning"
-            },
-            {
-                "name": "Postman",
-                "level": "Learning"
-            }
-        ]
+        "skills": skills
     }
-# GET ONE SKILL USING PATH PARAMETER
+# IMPORTANT:
+# This must come BEFORE /skills/{skill_name}
+@app.get("/skills/search")
+def search_skills(level: str | None = None):
+
+    if level is None:
+        return {
+            "skills": skills
+        }
+    filtered_skills = []
+    for skill in skills:
+        if skill["level"].lower() == level.lower():
+            filtered_skills.append(skill)
+    return {
+        "skills": filtered_skills
+    }
+# Keep dynamic path AFTER /skills/search
 @app.get("/skills/{skill_name}")
 def get_skill(skill_name: str):
-    skills = {
-        "sap-cpi": {
-            "name": "SAP CPI",
-            "level": "Learning"
-        },
 
-        "api-management": {
-            "name": "SAP API Management",
-            "level": "Learning"
-        },
+    for skill in skills:
+        if skill["name"].lower() == skill_name.lower():
+            return skill
 
-        "python": {
-            "name": "Python",
-            "level": "Learning"
-        },
+    raise HTTPException(
+        status_code=404,
+        detail="Skill not found"
+    )
+@app.post("/skills", status_code=status.HTTP_201_CREATED)
+def create_skill(skill: Skill):
 
-        "postman": {
-            "name": "Postman",
-            "level": "Learning"
-        }
+    new_skill = {
+        "name": skill.name,
+        "level": skill.level
     }
 
-    skill = skills.get(skill_name.lower())
-
-    if skill:
-        return skill
+    skills.append(new_skill)
 
     return {
-        "message": "Skill not found"
+        "message": "Skill created successfully",
+        "skill": new_skill
     }
